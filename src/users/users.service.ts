@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -33,13 +39,41 @@ export class UsersService {
     }
     return user;
   }
-  async create(userData: CreateUserDto) {
-    return this.prismaService.user.create({
-      data: {
-        ...userData,
-        password: await bcrypt.hash(userData.password, 10),
-      },
+  async findByUsername(username: string) {
+    const user = await this.prismaService.user.findFirst({
+      where: { username },
     });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+  async findByEmail(email: string) {
+    const user = await this.prismaService.user.findFirst({
+      where: { email },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+  async create(userData: CreateUserDto) {
+    try {
+      const user = await this.prismaService.user.create({
+        data: {
+          ...userData,
+          password: await bcrypt.hash(userData.password, 10),
+        },
+      });
+      return user;
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ConflictException(
+          'User with this email or username already exists',
+        );
+      }
+      throw new InternalServerErrorException('Something went wrong');
+    }
   }
   async update(id: string, userData: UpdateUserDto) {
     return this.prismaService.user.update({
