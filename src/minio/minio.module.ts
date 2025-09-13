@@ -1,7 +1,6 @@
-import { Module, Global, DynamicModule } from '@nestjs/common';
+import { Module, DynamicModule } from '@nestjs/common';
 import { MinioService } from './minio.service';
 import * as Minio from 'minio';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MINIO_CLIENT } from './minio.constants';
 import { MinioController } from './minio.controller';
 

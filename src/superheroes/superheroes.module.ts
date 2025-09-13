@@ -4,10 +4,13 @@ import { AuthModule } from 'src/auth/auth.module';
 import { SuperheroesController } from './superheroes.controller';
 import { MinioModule } from 'src/minio/minio.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PrismaService } from 'src/database/prisma.service';
+import { DatabaseModule } from 'src/database/database.module';
 
 @Module({
   imports: [
     AuthModule,
+    DatabaseModule,
     MinioModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
