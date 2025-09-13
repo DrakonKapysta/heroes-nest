@@ -20,25 +20,31 @@ enum Roles{
 }
 
 model User{
-  id String @unique @default(uuid())
+  id String @id @default(uuid())
 
   username String @unique
   email String @unique
   password String
   role Roles @default(USER)
 
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+
   @@index(fields: [username, email])
 }
 
 model Superhero{
-  id String @unique @default(uuid())
+  id String @id @default(uuid())
 
   nickname String @unique
-  real_name String
-  origin_description String
-  superpowers String
-  catch_phrase String
+  real_name String?
+  origin_description String?
+  superpowers String[]
+  catch_phrase String?
   images String[]
+
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
 
   @@index(fields: [nickname, real_name])
 }
