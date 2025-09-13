@@ -57,6 +57,22 @@ export class UsersController {
     this.logger.log(`Get user by id: ${id}`);
     return this.userService.findById(id);
   }
+  @ApiOkResponse({ type: UserDto })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+    schema: {
+      example: {
+        statusCode: 404,
+        message: 'User not found',
+        error: 'Not Found',
+      },
+    },
+  })
+  @Get(':username')
+  async getUserByUsername(@Param('username') username: string) {
+    this.logger.log(`Get user by username: ${username}`);
+    return this.userService.findByUsername(username);
+  }
   @ApiCreatedResponse({ type: UserDto })
   @Post()
   async createUser(@Body() user: CreateUserDto) {
