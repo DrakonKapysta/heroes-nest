@@ -39,9 +39,9 @@ model Superhero{
   nickname String @unique
   real_name String?
   origin_description String?
-  superpowers String[]
+  superpowers String[] @default([])
   catch_phrase String?
-  images String[]
+  images String[] @default([])
 
   created_at   DateTime      @default(now())
   updated_at   DateTime      @updatedAt
