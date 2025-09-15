@@ -50,7 +50,6 @@ export class AuthController {
     @CurrentUser() user: UserDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<UserDto> {
-    console.log('Authenticated user:', user);
     const token = await this.authService.login(user);
     res.cookie('heroes_auth', token, {
       httpOnly: true,
@@ -67,7 +66,14 @@ export class AuthController {
   })
   @ApiCreatedResponse({ type: UserDto })
   @Post('register')
-  async register(@Body() user: CreateUserDto) {
-    return this.usersService.create(user);
+  async register(
+    @Body() user: CreateUserDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const data = await this.authService.register(user);
+    res.cookie('heroes_auth', data.token, {
+      httpOnly: true,
+    });
+    return data.user;
   }
 }
