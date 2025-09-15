@@ -105,11 +105,18 @@ export class MinioService {
     await Promise.all(deletePromises);
   }
 
-  async renameFile(heroNickname: string, oldFileName: string): Promise<string> {
-    const oldObjectName = `${heroNickname}/${oldFileName}`;
-    const newFileName = `${Date.now()}-${oldFileName}`;
-    const newObjectName = `${heroNickname}/${newFileName}`;
+  async renameFile(
+    oldHeroNickname: string,
+    newHeroNickname: string,
+    fileName: string,
+  ): Promise<string> {
+    const oldObjectName = `${oldHeroNickname}/${fileName}`;
+    const newObjectName = `${newHeroNickname}/${fileName}`;
     const cacheKey = `minio:${this.bucketName}/${oldObjectName}`;
+
+    this.logger.debug(
+      `Renaming file from ${oldObjectName} to ${newObjectName}`,
+    );
 
     await this.minioClient.copyObject(
       this.bucketName,
@@ -121,7 +128,7 @@ export class MinioService {
 
     await this.redisService.removeFromCache(cacheKey);
 
-    return newFileName;
+    return newObjectName;
   }
 
   private async ensureBucketExists() {

@@ -119,9 +119,14 @@ export class SuperheroesService {
       throw new InternalServerErrorException('Superhero not found');
     }
     if (superhero.nickname && existingHero.nickname !== superhero.nickname) {
-      await this.minioService.renameFile(
-        existingHero.nickname,
-        superhero.nickname,
+      await Promise.all(
+        existingHero.images.map((image) =>
+          this.minioService.renameFile(
+            existingHero.nickname,
+            superhero.nickname!,
+            image,
+          ),
+        ),
       );
     }
     const clearedImages: string[] = [];
