@@ -11,7 +11,6 @@ This is the backend for the Super Hero App, built with [NestJS](https://nestjs.c
 - File upload and storage via MinIO
 - API documentation with Swagger
 - Dockerized infrastructure (PostgreSQL, MinIO, Redis)
-- Unit and e2e tests
 
 ## Prerequisites
 
@@ -107,8 +106,6 @@ http://localhost:5000/api
 ## Running Tests
 
 - Unit tests: `npm run test`
-- e2e tests: `npm run test:e2e`
-- Test coverage: `npm run test:cov`
 
 ## Useful Docker Commands
 
