@@ -1,237 +1,139 @@
 # Super Hero App - Backend
 
-## 🚀 Технології
+## Overview
 
-- **NestJS** - Node.js фреймворк для створення серверних додатків
-- **TypeScript** - типізована мова програмування
-- **PostgreSQL** - база даних
-- **MinIO** - об'єктне сховище для файлів
-- **Docker** - контейнеризація
-- **JWT** - автентифікація
-- **Passport** - стратегії автентифікації
+This is the backend for the Super Hero App, built with [NestJS](https://nestjs.com/) and [TypeScript](https://www.typescriptlang.org/). It provides RESTful APIs for managing superheroes and users, supports authentication with JWT, and stores files using MinIO. The app uses PostgreSQL as its database and Redis for caching.
 
-## 📋 Передумови
+## Features
 
-Переконайтеся, що у вас встановлено:
+- User registration and authentication (JWT, Passport)
+- Superhero CRUD operations
+- File upload and storage via MinIO
+- API documentation with Swagger
+- Dockerized infrastructure (PostgreSQL, MinIO, Redis)
+- Unit and e2e tests
 
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18+)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
-- [Node.js](https://nodejs.org/) (версія 18 або новіша)
-- [npm](https://www.npmjs.com/) або [yarn](https://yarnpkg.com/)
 
-## 🛠️ Встановлення та запуск
+## Getting Started
 
-### 1. Клонування репозиторію
+### 1. Clone the repository
 
-```bash
+```sh
 git clone <repository-url>
+cd super-hero-app/back-end
 ```
 
-### 2. Встановлення залежностей
+### 2. Install dependencies
 
-```bash
+```sh
 npm install
 ```
 
-або
+or
 
-```bash
+```sh
 yarn install
 ```
 
-### 3. Запуск інфраструктури через Docker
+### 3. Configure environment variables
 
-Спочатку запустіть PostgreSQL та MinIO:
+Create a `.env` file in the project root:
 
-```bash
+```properties
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/heroes?schema=public"
+JWT_SECRET=your-super-secret-jwt-key
+JWT_EXPIRATION=3600
+PORT=5000
+
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_USE_SSL=false
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin123
+
+REDIS_PORT=6379
+```
+
+### 4. Start infrastructure with Docker
+
+```sh
 docker-compose up -d
 ```
 
-Ця команда запустить:
+This will start:
 
-- **PostgreSQL** на порту `5432`
-  - База даних: `heroes`
-  - Користувач: `postgres`
-  - Пароль: `postgres`
-- **MinIO** на портах `9000` (API) та `9090` (Console)
-  - Користувач: `minioadmin`
-  - Пароль: `minioadmin123`
+- PostgreSQL on port 5432
+- MinIO on ports 9000 (API) and 9090 (Console)
+- Redis on port 6379
 
-### 4. Налаштування змінних середовища
+### 5. Run database migrations and seed data
 
-Створіть файл `.env` в корені проекту:
+If you use Prisma, run:
 
-```bash
-# База даних
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/heroes
-
-# JWT
-JWT_SECRET=your-super-secret-jwt-key
-
-# MinIO
-MINIO_ENDPOINT=localhost
-MINIO_PORT=9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin123
-MINIO_BUCKET_NAME=heroes-bucket
-
-# Додаток
-PORT=3000
-NODE_ENV=development
+```sh
+npx prisma migrate deploy
+npm run prisma:seed
 ```
 
-### 5. Запуск додатку
+### 6. Start the backend server
 
-#### Режим розробки
+#### Development mode
 
-```bash
+```sh
 npm run start:dev
 ```
 
-#### Режим продакшн
+#### Production mode
 
-```bash
+```sh
 npm run build
 npm run start:prod
 ```
 
-#### Режим з відладженням
+## API Documentation
 
-```bash
-npm run start:debug
+After starting the server, Swagger documentation is available at:
+
+```
+http://localhost:5000/api
 ```
 
-## 🧪 Тестування
+## Running Tests
 
-### Запуск юніт тестів
+- Unit tests: `npm run test`
+- e2e tests: `npm run test:e2e`
+- Test coverage: `npm run test:cov`
 
-```bash
-npm run test
-```
+## Useful Docker Commands
 
-### Запуск тестів з відстеженням змін
+- Stop services: `docker-compose down`
+- View logs: `docker-compose logs`
+- Access MinIO Console: [http://localhost:9090](http://localhost:9090) (login: `minioadmin`, password: `minioadmin123`)
+- Access PostgreSQL:
+  ```sh
+  docker exec -it postgres-heroes psql -U postgres -d heroes
+  ```
 
-```bash
-npm run test:watch
-```
-
-### Запуск e2e тестів
-
-```bash
-npm run test:e2e
-```
-
-### Запуск тестів з покриттям
-
-```bash
-npm run test:cov
-```
-
-## 🐳 Docker команди
-
-### Запуск інфраструктури
-
-```bash
-# Запуск у фоновому режимі
-docker-compose up -d
-
-# Запуск з логами
-docker-compose up
-
-# Зупинка сервісів
-docker-compose down
-
-# Зупинка з видаленням томів
-docker-compose down -v
-```
-
-### Перевірка статусу контейнерів
-
-```bash
-docker-compose ps
-```
-
-### Перегляд логів
-
-```bash
-# Логи всіх сервісів
-docker-compose logs
-
-# Логи конкретного сервісу
-docker-compose logs postgres
-docker-compose logs minio
-```
-
-## 🔧 Корисні команди
-
-### Лінтинг та форматування
-
-```bash
-# Запуск ESLint
-npm run lint
-
-# Форматування коду
-npm run format
-```
-
-### Робота з базою даних
-
-```bash
-# Підключення до PostgreSQL через Docker
-docker exec -it postgres-heroes psql -U postgres -d heroes
-```
-
-### Доступ до MinIO Console
-
-Відкрийте в браузері: http://localhost:9090
-
-- Логін: `minioadmin`
-- Пароль: `minioadmin123`
-
-## 📁 Структура проекту
+## Project Structure
 
 ```
 back-end/
-├── src/
-│   ├── app.controller.ts      # Основний контролер
-│   ├── app.module.ts          # Головний модуль додатку
-│   ├── app.service.ts         # Основний сервіс
-│   └── main.ts               # Точка входу
-├── test/                     # E2E тести
-├── docker-compose.yaml       # Docker конфігурація
-├── package.json             # NPM залежності
-└── README.md               # Цей файл
+├── src/                # Source code
+├── prisma/             # Prisma schema and migrations
+├── test/               # e2e tests
+├── docker-compose.yaml # Docker infrastructure
+├── package.json        # NPM scripts and dependencies
+└── README.md           # This file
 ```
 
-## 🌐 API Endpoints
+## Troubleshooting
 
-Після запуску додаток буде доступний за адресою: http://localhost:3000
-
-## 🚨 Усунення проблем
-
-### Порти зайняті
-
-Якщо порти 5432, 9000 або 9090 зайняті, змініть їх у файлі `docker-compose.yaml`.
-
-### Проблеми з правами доступу
-
-На Linux/macOS можуть знадобитися додаткові права:
-
-```bash
-sudo docker-compose up -d
-```
-
-### Очищення Docker
-
-Якщо виникають проблеми з контейнерами:
-
-```bash
-# Зупинка всіх контейнерів
-docker-compose down
-
-# Видалення томів
-docker-compose down -v
-
-# Перезапуск
-docker-compose up -d
-```
+- **Ports busy:** Change ports in `docker-compose.yaml` or `.env`.
+- **MinIO Console:** [http://localhost:9090](http://localhost:9090)
+- **Database connection issues:**
