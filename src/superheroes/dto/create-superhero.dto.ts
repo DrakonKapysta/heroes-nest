@@ -8,6 +8,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Superpower } from '../enum/superpowers.enum';
+import { Transform } from 'class-transformer';
 
 export class CreateSuperheroDto {
   @ApiProperty({ example: 'Batman', description: 'Unique superhero nickname' })
@@ -52,7 +53,11 @@ export class CreateSuperheroDto {
   @IsEnum(Superpower, { each: true })
   @IsArray()
   @IsOptional()
-  superpowers?: Superpower[] = [];
+  @Transform(({ value }) => {
+    if (!value) return [];
+    return Array.isArray(value) ? value : [value];
+  })
+  superpowers?: Superpower[];
 
   @ApiPropertyOptional({
     type: 'array',
@@ -64,5 +69,9 @@ export class CreateSuperheroDto {
   })
   @IsArray()
   @IsOptional()
-  images?: File[] = [];
+  @Transform(({ value }) => {
+    if (!value) return [];
+    return Array.isArray(value) ? value : [value];
+  })
+  images?: string[] = [];
 }

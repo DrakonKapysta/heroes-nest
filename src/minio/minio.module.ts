@@ -3,6 +3,8 @@ import { MinioService } from './minio.service';
 import * as Minio from 'minio';
 import { MINIO_CLIENT } from './minio.constants';
 import { MinioController } from './minio.controller';
+import { RedisModule } from 'src/redis/redis.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 export interface MinioModuleOptions {
   endPoint: string;
@@ -19,6 +21,15 @@ export interface MinioModuleAsyncOptions {
 }
 
 @Module({
+  imports: [
+    RedisModule.registerAsync({
+      useFactory: (configService: ConfigService) => ({
+        url: `redis://localhost:${configService.getOrThrow<number>('REDIS_PORT')}`,
+      }),
+      imports: [ConfigModule],
+      inject: [ConfigService],
+    }),
+  ],
   controllers: [MinioController],
 })
 export class MinioModule {

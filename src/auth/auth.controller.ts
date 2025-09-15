@@ -50,11 +50,11 @@ export class AuthController {
     @CurrentUser() user: UserDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<UserDto> {
+    console.log('Authenticated user:', user);
     const token = await this.authService.login(user);
     res.cookie('heroes_auth', token, {
       httpOnly: true,
     });
-    1;
     return user;
   }
   @ApiConflictResponse({
