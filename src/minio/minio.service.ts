@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MINIO_CLIENT } from './minio.constants';
 import * as Minio from 'minio';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class MinioService {
@@ -10,27 +11,20 @@ export class MinioService {
 
   constructor(
     @Inject(MINIO_CLIENT) private readonly minioClient: Minio.Client,
+    private readonly redisService: RedisService,
   ) {}
 
-  async getPresignedUrl(
-    bucket: string,
-    objectName: string,
-    expiresInSec = 3600,
-  ): Promise<string> {
-    return this.minioClient.presignedGetObject(
-      bucket,
-      objectName,
-      expiresInSec,
-    );
-  }
-
   async uploadFiles(
-    heroId: string,
+    heroNickname: string,
     files: Express.Multer.File[],
   ): Promise<string[]> {
     const uploadPromises = files.map(async (file, index) => {
       const fileName = `${Date.now()}-${index}-${file.originalname}`;
-      const objectName = `${heroId}/${fileName}`;
+      this.logger.log(`Uploading file: ${fileName}`);
+      const objectName = `${heroNickname}/${fileName}`;
+      this.logger.log(`Object name: ${objectName}`);
+
+      await this.ensureBucketExists();
 
       await this.minioClient.putObject(
         this.bucketName,
@@ -48,54 +42,87 @@ export class MinioService {
     return Promise.all(uploadPromises);
   }
 
-  // async getPresignedUrl(heroId: string, fileName: string): Promise<string> {
-  //   const objectName = `${heroId}/${fileName}`;
-  //   const cacheKey = `minio:${this.bucketName}/${objectName}`;
+  async getPresignedUrl(
+    heroNickname: string,
+    fileName: string,
+  ): Promise<string | null> {
+    const objectName = `${heroNickname}/${fileName}`;
+    const cacheKey = `minio:${this.bucketName}/${objectName}`;
 
-  //   // Проверяем кеш
-  //   const cachedUrl = await this.redis.get(cacheKey);
-  //   if (cachedUrl) {
-  //     this.logger.debug(`Cache hit for ${cacheKey}`);
-  //     return cachedUrl;
-  //   }
+    // Here we need to check if the URL is cached in Redis, if so then just return it...
+    const cachedUrl = await this.redisService.checkCashe(cacheKey);
+    if (cachedUrl) {
+      this.logger.debug(`Cache hit for ${cacheKey}`);
+      return cachedUrl;
+    }
 
-  //   // Проверяем существование файла
-  //   try {
-  //     await this.minioClient.statObject(this.bucketName, objectName);
-  //   } catch (error) {
-  //     this.logger.warn(`File not found: ${objectName}`);
-  //     return null;
-  //   }
+    // Now we need to check if the object is actually exists in MinIO, cause if not then we just can't generate URL for it
+    // maybe we need to check it even before checking cache?
+    // TODO: think about it
+    try {
+      await this.minioClient.statObject(this.bucketName, objectName);
+    } catch (error) {
+      this.logger.warn(`File not found: ${objectName}`);
+      return null;
+    }
 
-  //   // Генерируем presigned URL
-  //   const presignedUrl = await this.minioClient.presignedUrl(
-  //     'GET',
-  //     this.bucketName,
-  //     objectName,
-  //     this.presignedUrlTTL,
-  //   );
+    // We asume that the object exists, so we can generate presigned URL for it
+    const presignedUrl = await this.minioClient.presignedUrl(
+      'GET',
+      this.bucketName,
+      objectName,
+      this.presignedUrlTTL, // that's the time for which the URL will be valid
+    );
 
-  //   // Кешируем в Redis с TTL чуть меньше чем у URL
-  //   await this.redis.setex(cacheKey, this.presignedUrlTTL - 300, presignedUrl);
+    // And finally we need to cache the generated URL in Redis, but with a bit less time than it is valid for
+    // so we can be sure that we won't return expired URL from cache at some point like 10 seconds after it expired
+    // For example we retuned it from cache, but till that url reached frontend it was already expired - that's bad
+    await this.redisService.setWithExparingTime(
+      cacheKey,
+      presignedUrl,
+      this.presignedUrlTTL - 300,
+    );
 
-  //   this.logger.debug(`Generated and cached presigned URL for ${cacheKey}`);
-  //   return presignedUrl;
-  // }
+    this.logger.debug(`Generated and cached presigned URL for ${cacheKey}`);
+    return presignedUrl;
+  }
 
-  // async deleteFiles(heroId: string, fileNames: string[]): Promise<void> {
-  //   const deletePromises = fileNames.map(async (fileName) => {
-  //     const objectName = `${heroId}/${fileName}`;
-  //     const cacheKey = `minio:${this.bucketName}/${objectName}`;
+  async deleteFiles(heroNickname: string, fileNames: string[]): Promise<void> {
+    const deletePromises = fileNames.map(async (fileName) => {
+      const objectName = `${heroNickname}/${fileName}`;
+      const cacheKey = `minio:${this.bucketName}/${objectName}`;
 
-  //     // Удаляем файл
-  //     await this.minioClient.removeObject(this.bucketName, objectName);
+      // Remove from MinIO
+      await this.minioClient.removeObject(this.bucketName, objectName);
 
-  //     // Удаляем из кеша
-  //     await this.redis.del(cacheKey);
-  //   });
+      // Remove from Redis cache
+      // Not sure if we need to await this operation, and maybe we can just pass an array
+      // of keys to removeFromCache method?
+      // TODO: think about it
+      await this.redisService.removeFromCache(cacheKey);
+    });
 
-  //   await Promise.all(deletePromises);
-  // }
+    await Promise.all(deletePromises);
+  }
+
+  async renameFile(heroNickname: string, oldFileName: string): Promise<string> {
+    const oldObjectName = `${heroNickname}/${oldFileName}`;
+    const newFileName = `${Date.now()}-${oldFileName}`;
+    const newObjectName = `${heroNickname}/${newFileName}`;
+    const cacheKey = `minio:${this.bucketName}/${oldObjectName}`;
+
+    await this.minioClient.copyObject(
+      this.bucketName,
+      newObjectName,
+      `/${this.bucketName}/${oldObjectName}`,
+    );
+
+    await this.minioClient.removeObject(this.bucketName, oldObjectName);
+
+    await this.redisService.removeFromCache(cacheKey);
+
+    return newFileName;
+  }
 
   private async ensureBucketExists() {
     try {
